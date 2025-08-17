@@ -490,6 +490,77 @@ class FormTests(TestCase):
         self.assertIn(f'player_{self.player3.id}_meld_points', form.fields)
         self.assertIn(f'player_{self.player3.id}_trick_points', form.fields)
 
+    def test_round_form_trick_points_validation_valid(self):
+        """Test that RoundForm accepts valid trick points totaling 250."""
+        form_data = {
+            'game_maker': self.player1.pk,
+            'bid_amount': 150,
+            'is_success': True,
+            'meld_points': 60,
+            'trick_points': 120,  # Game maker: 120
+            f'player_{self.player2.id}_meld_points': 40,
+            f'player_{self.player2.id}_trick_points': 80,  # Player 2: 80
+            f'player_{self.player3.id}_meld_points': 20,
+            f'player_{self.player3.id}_trick_points': 50,  # Player 3: 50
+            # Total: 120 + 80 + 50 = 250 ✓
+        }
+        form = RoundForm(data=form_data, game=self.game)
+        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+
+    def test_round_form_trick_points_validation_exceeds_250(self):
+        """Test that RoundForm rejects trick points totaling more than 250."""
+        form_data = {
+            'game_maker': self.player1.pk,
+            'bid_amount': 150,
+            'is_success': True,
+            'meld_points': 60,
+            'trick_points': 150,  # Game maker: 150
+            f'player_{self.player2.id}_meld_points': 40,
+            f'player_{self.player2.id}_trick_points': 80,  # Player 2: 80
+            f'player_{self.player3.id}_meld_points': 20,
+            f'player_{self.player3.id}_trick_points': 50,  # Player 3: 50
+            # Total: 150 + 80 + 50 = 280 > 250 ✗
+        }
+        form = RoundForm(data=form_data, game=self.game)
+        self.assertFalse(form.is_valid())
+        self.assertIn('Total trick points (280) cannot exceed 250', str(form.errors))
+
+    def test_round_form_trick_points_validation_exactly_250(self):
+        """Test that RoundForm accepts trick points totaling exactly 250."""
+        form_data = {
+            'game_maker': self.player1.pk,
+            'bid_amount': 150,
+            'is_success': True,
+            'meld_points': 60,
+            'trick_points': 100,  # Game maker: 100
+            f'player_{self.player2.id}_meld_points': 40,
+            f'player_{self.player2.id}_trick_points': 100,  # Player 2: 100
+            f'player_{self.player3.id}_meld_points': 20,
+            f'player_{self.player3.id}_trick_points': 50,  # Player 3: 50
+            # Total: 100 + 100 + 50 = 250 ✓
+        }
+        form = RoundForm(data=form_data, game=self.game)
+        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+
+    def test_round_form_trick_points_validation_game_maker_excluded(self):
+        """Test that game maker's 'other player' fields are excluded from validation."""
+        form_data = {
+            'game_maker': self.player1.pk,
+            'bid_amount': 150,
+            'is_success': True,
+            'meld_points': 60,
+            'trick_points': 120,  # Game maker: 120
+            f'player_{self.player1.id}_meld_points': 999,  # This should be ignored
+            f'player_{self.player1.id}_trick_points': 999,  # This should be ignored
+            f'player_{self.player2.id}_meld_points': 40,
+            f'player_{self.player2.id}_trick_points': 80,  # Player 2: 80
+            f'player_{self.player3.id}_meld_points': 20,
+            f'player_{self.player3.id}_trick_points': 50,  # Player 3: 50
+            # Total should be: 120 + 80 + 50 = 250 (ignoring player1's "other" fields)
+        }
+        form = RoundForm(data=form_data, game=self.game)
+        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+
 
 class IntegrationTests(TestCase):
     """Integration tests for complete game workflows."""

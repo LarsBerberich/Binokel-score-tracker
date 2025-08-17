@@ -76,3 +76,32 @@ class RoundForm(forms.ModelForm):
                     initial=0,
                     widget=forms.NumberInput(attrs={'class': 'form-control'})
                 )
+
+    def clean(self):
+        """Custom validation for the entire form."""
+        cleaned_data = super().clean()
+        
+        if not self.game:
+            return cleaned_data
+        
+        # Validate total trick points don't exceed 250
+        total_trick_points = 0
+        game_maker_id = cleaned_data.get('game_maker')
+        
+        # Add game maker's trick points
+        game_maker_trick_points = cleaned_data.get('trick_points', 0) or 0
+        total_trick_points += game_maker_trick_points
+        
+        # Add other players' trick points (excluding game maker)
+        for player in self.game.players.all():
+            if game_maker_id and player.id != game_maker_id.id:
+                player_trick_points = cleaned_data.get(f'player_{player.id}_trick_points', 0) or 0
+                total_trick_points += player_trick_points
+        
+        if total_trick_points > 250:
+            raise forms.ValidationError(
+                f"Total trick points ({total_trick_points}) cannot exceed 250. "
+                f"In Binokel, there are exactly 250 trick points per round."
+            )
+        
+        return cleaned_data
