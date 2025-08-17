@@ -16,7 +16,7 @@ class ScoreInline(admin.TabularInline):
 @admin.register(Round)
 class RoundAdmin(admin.ModelAdmin):
     list_display = ('game', 'round_number', 'game_maker', 'bid_amount', 'is_success')
-    list_filter = ('game', 'game_maker', 'is_success', 'is_abgehen', 'is_durch')
+    list_filter = ('game', 'game_maker', 'is_success', 'is_abgehen', 'is_durch', 'is_doppelt_abgehen')
     inlines = [ScoreInline]
 
 

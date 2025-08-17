@@ -51,8 +51,12 @@ class Game(models.Model):
                         round_score += round_obj.bid_amount
                     elif round_obj.is_abgehen:
                         round_score -= round_obj.bid_amount
-                    else:
+                    elif round_obj.is_doppelt_abgehen:
                         round_score -= 2 * round_obj.bid_amount
+                    else:
+                        # Default case: if none of the above are set, it's considered a failed attempt (doppelt abgehen)
+                        round_score -= 2 * round_obj.bid_amount
+                    # Note: is_durch doesn't affect scoring differently, it's just a flag
                     
                     # Add meld points and trick points
                     round_score += round_obj.meld_points + round_obj.trick_points
@@ -88,6 +92,7 @@ class Round(models.Model):
     is_success = models.BooleanField(default=False)
     is_abgehen = models.BooleanField(default=False)  # If game maker chooses to "go down"
     is_durch = models.BooleanField(default=False)    # If game maker attempts a "Durch"
+    is_doppelt_abgehen = models.BooleanField(default=False)  # If game maker fails to reach bid amount
     meld_points = models.PositiveIntegerField(default=0)  # Meld points for the game maker
     trick_points = models.PositiveIntegerField(default=0)  # Trick points for the game maker
     last_trick_winner = models.ForeignKey(
