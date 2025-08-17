@@ -39,32 +39,36 @@ class Game(models.Model):
             score = 0
             rounds_won = 0
             
-            for round_obj in self.rounds.filter(game_maker=player):
-                if round_obj.is_success:
-                    score += round_obj.bid_amount
-                elif round_obj.is_abgehen:
-                    score -= round_obj.bid_amount
+            # Process all rounds chronologically
+            all_rounds = self.rounds.all().order_by('round_number')
+            
+            for round_obj in all_rounds:
+                round_score = 0
+                
+                if round_obj.game_maker == player:
+                    # Game maker scoring
+                    if round_obj.is_success:
+                        round_score += round_obj.bid_amount
+                    elif round_obj.is_abgehen:
+                        round_score -= round_obj.bid_amount
+                    else:
+                        round_score -= 2 * round_obj.bid_amount
+                    
+                    # Add meld points and trick points
+                    round_score += round_obj.meld_points + round_obj.trick_points
                 else:
-                    score -= 2 * round_obj.bid_amount
+                    # Other player scoring - only meld and trick points
+                    player_score = Score.objects.filter(round=round_obj, player=player).first()
+                    if player_score:
+                        round_score += player_score.meld_points + player_score.trick_points
                 
-                # Add meld points and trick points
-                score += round_obj.meld_points + round_obj.trick_points
+                # Add round score to total
+                score += round_score
                 
-                # Check if round is won
-                if score >= 1000:
+                # Check if round is won after this round
+                while score >= 1000:
                     rounds_won += 1
-                    score = 0  # Reset score after winning a round
-
-            for round_obj in self.rounds.exclude(game_maker=player):
-                # Add meld points
-                player_score = self.scores.filter(round=round_obj, player=player).first()
-                if player_score:
-                    score += player_score.meld_points + player_score.trick_points
-                
-                # Check if round is won
-                if score >= 1000:
-                    rounds_won += 1
-                    score = 0  # Reset score after winning a round
+                    score -= 1000
             
             result[player.id] = {
                 'player': player,

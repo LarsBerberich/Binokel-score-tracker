@@ -39,16 +39,11 @@ def game_create(request):
         player_formset = PlayerFormSet(request.POST, prefix='players')
         
         if form.is_valid() and player_formset.is_valid():
-            game = form.save()
-            
-            # Save players
+            # Count valid players first
             players = []
             for player_form in player_formset:
                 if player_form.is_valid() and player_form.cleaned_data.get('name'):
-                    player, _ = Player.objects.get_or_create(
-                        name=player_form.cleaned_data['name']
-                    )
-                    players.append(player)
+                    players.append(player_form.cleaned_data['name'])
             
             if len(players) < 3:
                 messages.error(request, "You need at least 3 players for a game.")
@@ -57,9 +52,27 @@ def game_create(request):
                     'player_formset': player_formset,
                 })
             
-            game.players.set(players)
+            # Save game and players
+            game = form.save()
+            player_objects = []
+            for player_name in players:
+                player, _ = Player.objects.get_or_create(name=player_name)
+                player_objects.append(player)
+            
+            game.players.set(player_objects)
             messages.success(request, f"Game '{game.name}' created successfully!")
             return redirect('score_tracker:game_detail', pk=game.pk)
+        else:
+            # Check if it's a validation issue or insufficient players
+            if form.is_valid():
+                # Form is valid but formset is not, check if it's due to insufficient players
+                players = []
+                for player_form in player_formset:
+                    if player_form.cleaned_data and player_form.cleaned_data.get('name'):
+                        players.append(player_form.cleaned_data['name'])
+                
+                if len(players) < 3:
+                    messages.error(request, "You need at least 3 players for a game.")
     else:
         form = GameForm()
         player_formset = PlayerFormSet(prefix='players')
