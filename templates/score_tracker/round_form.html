@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% load django_bootstrap5 %}
+
+{% block title %}New Round - {{ game.name }} - Binokel Score Tracker{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Add Round for {{ game.name }}</h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <h5>Game Maker Information</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {% bootstrap_field form.game_maker %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {% bootstrap_field form.bid_amount %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3 form-check">
+                                    {% bootstrap_field form.is_success %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3 form-check">
+                                    {% bootstrap_field form.is_abgehen %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3 form-check">
+                                    {% bootstrap_field form.is_durch %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5>Game Maker Points</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {% bootstrap_field form.meld_points %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {% bootstrap_field form.trick_points %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5>Other Players' Points</h5>
+                        {% for player in game.players.all %}
+                            {% if player != form.game_maker.value %}
+                                <div class="card mb-3">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">{{ player.name }}</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                {% bootstrap_field form|get_field_by_name:"player_"|add:player.id|add:"_meld_points" %}
+                                            </div>
+                                            <div class="col-md-6">
+                                                {% bootstrap_field form|get_field_by_name:"player_"|add:player.id|add:"_trick_points" %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h5>Last Trick</h5>
+                        {% bootstrap_field form.last_trick_winner %}
+                    </div>
+                    
+                    <div class="d-flex justify-content-end">
+                        <a href="{% url 'score_tracker:game_detail' game.id %}" class="btn btn-outline-secondary me-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Save Round</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle fields based on form selections
+    const isAbgehenCheckbox = document.getElementById('id_is_abgehen');
+    const isDurchCheckbox = document.getElementById('id_is_durch');
+    const isSuccessCheckbox = document.getElementById('id_is_success');
+    
+    function updateFormState() {
+        // If "Durch" is selected
+        if (isDurchCheckbox.checked) {
+            isAbgehenCheckbox.checked = false;
+            isAbgehenCheckbox.disabled = true;
+            isSuccessCheckbox.disabled = true;
+        } 
+        // If "Abgehen" is selected
+        else if (isAbgehenCheckbox.checked) {
+            isDurchCheckbox.checked = false;
+            isDurchCheckbox.disabled = true;
+            isSuccessCheckbox.checked = false;
+            isSuccessCheckbox.disabled = true;
+        } else {
+            isAbgehenCheckbox.disabled = false;
+            isDurchCheckbox.disabled = false;
+            isSuccessCheckbox.disabled = false;
+        }
+    }
+    
+    isAbgehenCheckbox.addEventListener('change', updateFormState);
+    isDurchCheckbox.addEventListener('change', updateFormState);
+    
+    // Run once at startup
+    updateFormState();
+});
+</script>
+{% endblock %}

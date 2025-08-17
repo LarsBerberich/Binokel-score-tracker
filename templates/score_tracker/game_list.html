@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Games - Binokel Score Tracker{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Binokel Games</h1>
+            <a href="{% url 'score_tracker:game_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus"></i> New Game
+            </a>
+        </div>
+        
+        <ul class="nav nav-tabs mb-4" id="gameTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="active-games-tab" data-bs-toggle="tab" data-bs-target="#active-games" type="button" role="tab">
+                    Active Games ({{ active_games|length }})
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="completed-games-tab" data-bs-toggle="tab" data-bs-target="#completed-games" type="button" role="tab">
+                    Completed Games ({{ completed_games|length }})
+                </button>
+            </li>
+        </ul>
+        
+        <div class="tab-content" id="gamesTabContent">
+            <!-- Active Games Tab -->
+            <div class="tab-pane fade show active" id="active-games" role="tabpanel">
+                {% if active_games %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Game</th>
+                                    <th>Players</th>
+                                    <th>Started</th>
+                                    <th>Rounds</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for game in active_games %}
+                                <tr>
+                                    <td>{{ game.name }}</td>
+                                    <td>
+                                        {% for player in game.players.all %}
+                                            {{ player.name }}{% if not forloop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </td>
+                                    <td>{{ game.start_date|date:"M d, Y H:i" }}</td>
+                                    <td>{{ game.rounds.count }}</td>
+                                    <td>
+                                        <a href="{% url 'score_tracker:game_detail' game.id %}" class="btn btn-sm btn-outline-primary">View</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        There are no active games. <a href="{% url 'score_tracker:game_create' %}">Create a new game</a> to get started!
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Completed Games Tab -->
+            <div class="tab-pane fade" id="completed-games" role="tabpanel">
+                {% if completed_games %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Game</th>
+                                    <th>Players</th>
+                                    <th>Started</th>
+                                    <th>Ended</th>
+                                    <th>Rounds</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for game in completed_games %}
+                                <tr>
+                                    <td>{{ game.name }}</td>
+                                    <td>
+                                        {% for player in game.players.all %}
+                                            {{ player.name }}{% if not forloop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </td>
+                                    <td>{{ game.start_date|date:"M d, Y H:i" }}</td>
+                                    <td>{{ game.end_date|date:"M d, Y H:i" }}</td>
+                                    <td>{{ game.rounds.count }}</td>
+                                    <td>
+                                        <a href="{% url 'score_tracker:game_detail' game.id %}" class="btn btn-sm btn-outline-primary">View</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        There are no completed games yet.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Binokel Score Tracker{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="jumbotron bg-light p-5 rounded">
+            <h1 class="display-4">Welcome to Binokel Score Tracker</h1>
+            <p class="lead">Track scores for your Binokel card game sessions with this easy-to-use application.</p>
+            <hr class="my-4">
+            <p>Binokel is a traditional Swabian card game that requires skill, strategy, and a good memory.</p>
+            
+            <div class="d-flex justify-content-center mt-4">
+                <a href="{% url 'score_tracker:game_create' %}" class="btn btn-primary btn-lg me-3">
+                    <i class="bi bi-plus-circle"></i> New Game
+                </a>
+                <a href="{% url 'score_tracker:game_list' %}" class="btn btn-outline-secondary btn-lg">
+                    <i class="bi bi-card-list"></i> View Games
+                </a>
+            </div>
+        </div>
+        
+        <div class="row mt-5">
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Active Games</h5>
+                        <p class="card-text display-4">{{ active_games }}</p>
+                        <a href="{% url 'score_tracker:game_list' %}" class="btn btn-sm btn-outline-primary">View Active Games</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Total Games</h5>
+                        <p class="card-text display-4">{{ total_games }}</p>
+                        <a href="{% url 'score_tracker:game_list' %}" class="btn btn-sm btn-outline-primary">View All Games</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Total Players</h5>
+                        <p class="card-text display-4">{{ total_players }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-5">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0">About Binokel</h4>
+            </div>
+            <div class="card-body">
+                <p>Binokel (or Binocle) is a traditional Swabian card game that originated from the Württemberg region and is traditionally played with a Württemberg deck.</p>
+                <p>The game requires strategic thinking and a good memory. The specialized Binokel cards are widely available.</p>
+                
+                <h5>Basic Rules:</h5>
+                <ul>
+                    <li>Typically played with 3 or 4 players</li>
+                    <li>The deck consists of 48 cards in the suits of Hearts, Diamonds (Schell), Clubs (Eichel), and Spades (Blatt)</li>
+                    <li>Cards are dealt counterclockwise</li>
+                    <li>Players bid for the right to choose trump and pick up additional cards</li>
+                    <li>Points are earned through melding combinations and taking tricks</li>
+                    <li>The first player to reach 1000 points wins a round</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

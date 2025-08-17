@@ -1,0 +1,12 @@
+# Django and related packages
+Django==4.2.8
+psycopg2-binary==2.9.9
+django-bootstrap5==23.3
+whitenoise==6.6.0
+
+# For testing
+behave-django==1.4.0
+selenium==4.15.2
+
+# For deployment
+gunicorn==21.2.0

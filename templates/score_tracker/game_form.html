@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load django_bootstrap5 %}
+
+{% block title %}New Game - Binokel Score Tracker{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Create New Game</h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <h5>Game Information</h5>
+                        {% bootstrap_form form %}
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5>Players</h5>
+                        <p class="text-muted">Enter the names of at least 3 players for the game.</p>
+                        
+                        {{ player_formset.management_form }}
+                        
+                        {% for form in player_formset %}
+                            <div class="mb-3">
+                                <label class="form-label">Player {{ forloop.counter }}</label>
+                                {% bootstrap_form form layout='inline' %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="d-flex justify-content-end">
+                        <a href="{% url 'score_tracker:game_list' %}" class="btn btn-outline-secondary me-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Create Game</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

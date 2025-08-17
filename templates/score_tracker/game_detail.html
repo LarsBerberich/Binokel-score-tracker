@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}{{ game.name }} - Binokel Score Tracker{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>{{ game.name }}</h1>
+            <div>
+                <a href="{% url 'score_tracker:round_create' game.id %}" class="btn btn-primary me-2">
+                    <i class="bi bi-plus"></i> New Round
+                </a>
+                <a href="{% url 'score_tracker:game_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Games
+                </a>
+            </div>
+        </div>
+        
+        <!-- Game Info Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0">Game Information</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Status:</strong> 
+                            {% if game.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Completed</span>
+                            {% endif %}
+                        </p>
+                        <p><strong>Start Date:</strong> {{ game.start_date|date:"F j, Y, H:i" }}</p>
+                        {% if not game.is_active %}
+                            <p><strong>End Date:</strong> {{ game.end_date|date:"F j, Y, H:i" }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Players:</strong></p>
+                        <ul>
+                            {% for player in game.players.all %}
+                                <li>{{ player.name }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Scoreboard -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Current Scoreboard</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Player</th>
+                                <th>Current Score</th>
+                                <th>Rounds Won</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for player_id, data in scores.items %}
+                                <tr {% if max_rounds_won > 0 and data.rounds_won == max_rounds_won %}class="table-success"{% endif %}>
+                                    <td>{{ data.player.name }}</td>
+                                    <td>{{ data.score }}</td>
+                                    <td>{{ data.rounds_won }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                {% if winner and max_rounds_won > 0 %}
+                    <div class="alert alert-success mt-3">
+                        <h5 class="alert-heading">Game Result</h5>
+                        <p><strong>{{ winner.name }}</strong> is currently winning with {{ max_rounds_won }} round{{ max_rounds_won|pluralize }} won!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Round History -->
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h4 class="mb-0">Round History</h4>
+            </div>
+            <div class="card-body">
+                {% if rounds %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Round</th>
+                                    <th>Game Maker</th>
+                                    <th>Bid</th>
+                                    <th>Result</th>
+                                    <th>Meld Points</th>
+                                    <th>Trick Points</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for round in rounds %}
+                                    <tr>
+                                        <td>{{ round.round_number }}</td>
+                                        <td>{{ round.game_maker.name }}</td>
+                                        <td>{{ round.bid_amount }}</td>
+                                        <td>
+                                            {% if round.is_durch %}
+                                                <span class="badge bg-primary">Durch</span>
+                                            {% elif round.is_abgehen %}
+                                                <span class="badge bg-warning text-dark">Abgehen</span>
+                                            {% elif round.is_success %}
+                                                <span class="badge bg-success">Success</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Failed</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ round.meld_points }}</td>
+                                        <td>{{ round.trick_points }}</td>
+                                        <td>{{ round.meld_points|add:round.trick_points }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        No rounds have been played yet. <a href="{% url 'score_tracker:round_create' game.id %}">Add a round</a> to get started!
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if game.is_active %}
+            <div class="d-flex justify-content-end mt-4">
+                <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#endGameModal">
+                    End Game
+                </button>
+            </div>
+            
+            <!-- End Game Modal -->
+            <div class="modal fade" id="endGameModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">End Game</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Are you sure you want to end this game? This action cannot be undone.</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <form method="post" action="{% url 'score_tracker:end_game' game.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-warning">End Game</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
