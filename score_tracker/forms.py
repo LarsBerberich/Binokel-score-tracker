@@ -41,13 +41,14 @@ class RoundForm(forms.ModelForm):
     class Meta:
         model = Round
         fields = [
-            'game_maker', 'bid_amount', 'is_success', 'is_abgehen', 'is_durch',
+            'game_maker', 'bid_amount', 'is_success', 'is_abgehen', 'is_durch', 'is_doppelt_abgehen',
             'meld_points', 'trick_points', 'last_trick_winner'
         ]
         widgets = {
             'is_success': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_abgehen': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_durch': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_doppelt_abgehen': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
     
     def __init__(self, *args, **kwargs):

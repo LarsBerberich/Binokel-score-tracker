@@ -168,6 +168,7 @@ class RoundModelTest(TestCase):
         self.assertFalse(round_obj.is_success)
         self.assertFalse(round_obj.is_abgehen)
         self.assertFalse(round_obj.is_durch)
+        self.assertFalse(round_obj.is_doppelt_abgehen)
     
     def test_round_str_representation(self):
         """Test the string representation of a round."""
@@ -197,6 +198,113 @@ class RoundModelTest(TestCase):
                 game_maker=self.player2,
                 bid_amount=200
             )
+
+
+class DoppeltAbgehenTests(TestCase):
+    """Test the new doppelt abgehen functionality."""
+    
+    def setUp(self):
+        self.player1 = Player.objects.create(name="Player 1")
+        self.player2 = Player.objects.create(name="Player 2") 
+        self.player3 = Player.objects.create(name="Player 3")
+        self.game = Game.objects.create(name="Test Game")
+        self.game.players.set([self.player1, self.player2, self.player3])
+    
+    def test_doppelt_abgehen_field_exists(self):
+        """Test that the new is_doppelt_abgehen field exists and defaults to False."""
+        round_obj = Round.objects.create(
+            game=self.game,
+            round_number=1,
+            game_maker=self.player1,
+            bid_amount=150
+        )
+        self.assertFalse(round_obj.is_doppelt_abgehen)
+    
+    def test_doppelt_abgehen_can_be_set(self):
+        """Test that is_doppelt_abgehen can be set to True."""
+        round_obj = Round.objects.create(
+            game=self.game,
+            round_number=1,
+            game_maker=self.player1,
+            bid_amount=150,
+            is_doppelt_abgehen=True
+        )
+        self.assertTrue(round_obj.is_doppelt_abgehen)
+    
+    def test_form_includes_doppelt_abgehen_field(self):
+        """Test that RoundForm includes the new is_doppelt_abgehen field."""
+        form = RoundForm(game=self.game)
+        self.assertIn('is_doppelt_abgehen', form.fields)
+    
+    def test_doppelt_abgehen_scoring(self):
+        """Test that is_doppelt_abgehen results in losing 2*bid_amount."""
+        round_obj = Round.objects.create(
+            game=self.game,
+            round_number=1,
+            game_maker=self.player1,
+            bid_amount=150,
+            is_doppelt_abgehen=True,
+            meld_points=50,
+            trick_points=80
+        )
+        
+        scores = self.game.get_current_score()
+        # Should get -2*bid_amount + meld_points + trick_points = -300 + 50 + 80 = -170
+        self.assertEqual(scores[self.player1.id]['score'], -170)
+    
+    def test_scoring_comparison_all_statuses(self):
+        """Test scoring comparison between all four statuses."""
+        bid_amount = 100
+        meld_points = 30
+        trick_points = 40
+        
+        # Test success scoring
+        round_success = Round.objects.create(
+            game=self.game,
+            round_number=1,
+            game_maker=self.player1,
+            bid_amount=bid_amount,
+            is_success=True,
+            meld_points=meld_points,
+            trick_points=trick_points
+        )
+        scores = self.game.get_current_score()
+        success_score = scores[self.player1.id]['score']
+        self.assertEqual(success_score, bid_amount + meld_points + trick_points)  # 170
+        
+        # Clear and test abgehen scoring
+        self.game.rounds.all().delete()
+        round_abgehen = Round.objects.create(
+            game=self.game,
+            round_number=1,
+            game_maker=self.player1,
+            bid_amount=bid_amount,
+            is_abgehen=True,
+            meld_points=meld_points,
+            trick_points=trick_points
+        )
+        scores = self.game.get_current_score()
+        abgehen_score = scores[self.player1.id]['score']
+        self.assertEqual(abgehen_score, -bid_amount + meld_points + trick_points)  # -30
+        
+        # Clear and test doppelt abgehen scoring
+        self.game.rounds.all().delete()
+        round_doppelt = Round.objects.create(
+            game=self.game,
+            round_number=1,
+            game_maker=self.player1,
+            bid_amount=bid_amount,
+            is_doppelt_abgehen=True,
+            meld_points=meld_points,
+            trick_points=trick_points
+        )
+        scores = self.game.get_current_score()
+        doppelt_score = scores[self.player1.id]['score']
+        self.assertEqual(doppelt_score, -2*bid_amount + meld_points + trick_points)  # -130
+        
+        # Verify relationships: success > abgehen > doppelt_abgehen
+        self.assertGreater(success_score, abgehen_score)
+        self.assertGreater(abgehen_score, doppelt_score)
 
 
 class ScoreModelTest(TestCase):

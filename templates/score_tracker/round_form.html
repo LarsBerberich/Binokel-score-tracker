@@ -31,19 +31,24 @@
                         </div>
                         
                         <div class="row">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <div class="mb-3 form-check">
                                     {% bootstrap_field form.is_success %}
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <div class="mb-3 form-check">
                                     {% bootstrap_field form.is_abgehen %}
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <div class="mb-3 form-check">
                                     {% bootstrap_field form.is_durch %}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3 form-check">
+                                    {% bootstrap_field form.is_doppelt_abgehen %}
                                 </div>
                             </div>
                         </div>
@@ -117,17 +122,91 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Toggle fields based on form selections
+    // Get checkbox elements
     const isAbgehenCheckbox = document.getElementById('id_is_abgehen');
     const isDurchCheckbox = document.getElementById('id_is_durch');
     const isSuccessCheckbox = document.getElementById('id_is_success');
+    const isDoppeltAbgehenCheckbox = document.getElementById('id_is_doppelt_abgehen');
+    
+    // Get point input elements
+    const meldPointsInput = document.getElementById('id_meld_points');
+    const trickPointsInput = document.getElementById('id_trick_points');
+    const bidAmountInput = document.getElementById('id_bid_amount');
+    
+    // Track whether user has manually changed status checkboxes
+    let userModifiedSuccess = false;
+    let userModifiedDoppeltAbgehen = false;
+    
+    function getAllPlayerPointInputs() {
+        const inputs = [];
+        // Find all player point inputs dynamically
+        const allInputs = document.querySelectorAll('input[type="number"]');
+        allInputs.forEach(input => {
+            if (input.name && (input.name.includes('_meld_points') || input.name.includes('_trick_points')) && 
+                input.name.startsWith('player_')) {
+                inputs.push(input);
+            }
+        });
+        return inputs;
+    }
+    
+    function areAllPointsEntered() {
+        // Check if game maker's points are entered
+        if (!meldPointsInput.value || !trickPointsInput.value) {
+            return false;
+        }
+        
+        // Check if all other players' points are entered
+        const playerInputs = getAllPlayerPointInputs();
+        for (let input of playerInputs) {
+            if (!input.value) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    function calculateAutomaticStatus() {
+        if (!areAllPointsEntered() || !bidAmountInput.value) {
+            return;
+        }
+        
+        const meldPoints = parseInt(meldPointsInput.value) || 0;
+        const trickPoints = parseInt(trickPointsInput.value) || 0;
+        const bidAmount = parseInt(bidAmountInput.value) || 0;
+        const totalPoints = meldPoints + trickPoints;
+        
+        // Only auto-calculate if user hasn't manually modified these fields
+        if (!userModifiedSuccess && !userModifiedDoppeltAbgehen) {
+            if (totalPoints >= bidAmount) {
+                // Game maker reached or exceeded bid amount - success
+                isSuccessCheckbox.checked = true;
+                isDoppeltAbgehenCheckbox.checked = false;
+            } else {
+                // Game maker didn't reach bid amount - doppelt abgehen
+                isSuccessCheckbox.checked = false;
+                isDoppeltAbgehenCheckbox.checked = true;
+            }
+            
+            // Update form state after auto-calculation
+            updateFormState();
+        }
+    }
     
     function updateFormState() {
+        // Reset all disabled states first
+        isAbgehenCheckbox.disabled = false;
+        isDurchCheckbox.disabled = false;
+        isSuccessCheckbox.disabled = false;
+        isDoppeltAbgehenCheckbox.disabled = false;
+        
         // If "Durch" is selected
         if (isDurchCheckbox.checked) {
             isAbgehenCheckbox.checked = false;
             isAbgehenCheckbox.disabled = true;
             isSuccessCheckbox.disabled = true;
+            isDoppeltAbgehenCheckbox.disabled = true;
         } 
         // If "Abgehen" is selected
         else if (isAbgehenCheckbox.checked) {
@@ -135,18 +214,55 @@ document.addEventListener('DOMContentLoaded', function() {
             isDurchCheckbox.disabled = true;
             isSuccessCheckbox.checked = false;
             isSuccessCheckbox.disabled = true;
-        } else {
-            isAbgehenCheckbox.disabled = false;
-            isDurchCheckbox.disabled = false;
-            isSuccessCheckbox.disabled = false;
+            isDoppeltAbgehenCheckbox.checked = false;
+            isDoppeltAbgehenCheckbox.disabled = true;
+        }
+        // If "Success" is selected
+        else if (isSuccessCheckbox.checked) {
+            isDoppeltAbgehenCheckbox.checked = false;
+            isDoppeltAbgehenCheckbox.disabled = true;
+        }
+        // If "Doppelt Abgehen" is selected
+        else if (isDoppeltAbgehenCheckbox.checked) {
+            isSuccessCheckbox.checked = false;
+            isSuccessCheckbox.disabled = true;
         }
     }
     
-    isAbgehenCheckbox.addEventListener('change', updateFormState);
-    isDurchCheckbox.addEventListener('change', updateFormState);
+    // Add event listeners for manual checkbox changes
+    isAbgehenCheckbox.addEventListener('change', function() {
+        updateFormState();
+    });
+    
+    isDurchCheckbox.addEventListener('change', function() {
+        updateFormState();
+    });
+    
+    isSuccessCheckbox.addEventListener('change', function() {
+        userModifiedSuccess = true;
+        updateFormState();
+    });
+    
+    isDoppeltAbgehenCheckbox.addEventListener('change', function() {
+        userModifiedDoppeltAbgehen = true;
+        updateFormState();
+    });
+    
+    // Add event listeners for point inputs to trigger automatic calculation
+    [meldPointsInput, trickPointsInput, bidAmountInput].forEach(input => {
+        if (input) {
+            input.addEventListener('input', calculateAutomaticStatus);
+        }
+    });
+    
+    // Also listen to all player point inputs
+    getAllPlayerPointInputs().forEach(input => {
+        input.addEventListener('input', calculateAutomaticStatus);
+    });
     
     // Run once at startup
     updateFormState();
+    calculateAutomaticStatus();
 });
 </script>
 {% endblock %}
