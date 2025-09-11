@@ -293,39 +293,56 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function calculateTrickPoints() {
-        // Count non-empty fields and their sum
-        let filledFields = [];
-        let totalPoints = 0;
+        // Get the selected game maker
+        const gameMakerSelect = document.getElementById('id_game_maker');
+        const selectedGameMaker = gameMakerSelect ? gameMakerSelect.value : null;
         
-        trickPointFields.forEach(field => {
+        if (!selectedGameMaker) {
+            removeAutoCalculatedIndicator();
+            validateTotalTrickPoints();
+            return;
+        }
+        
+        // Find game maker field and non-game maker fields
+        const gameMakerField = trickPointFields.find(field => field.playerId === 'game_maker');
+        const nonGameMakerFields = trickPointFields.filter(field => field.playerId !== 'game_maker');
+        
+        if (!gameMakerField || nonGameMakerFields.length !== 2) {
+            removeAutoCalculatedIndicator();
+            validateTotalTrickPoints();
+            return;
+        }
+        
+        // Count filled non-game maker fields
+        let filledNonGameMakerFields = [];
+        let nonGameMakerTotal = 0;
+        
+        nonGameMakerFields.forEach(field => {
             const value = parseInt(field.element.value) || 0;
             if (field.element.value.trim() !== '' && value > 0) {
-                filledFields.push(field);
-                totalPoints += value;
+                filledNonGameMakerFields.push(field);
+                nonGameMakerTotal += value;
             }
         });
         
-        // If exactly 2 fields are filled, auto-calculate the third
-        if (filledFields.length === 2) {
-            const remaining = TOTAL_TRICK_POINTS - totalPoints;
+        // If exactly 2 non-game maker fields are filled, auto-calculate game maker's points
+        if (filledNonGameMakerFields.length === 2) {
+            const remaining = TOTAL_TRICK_POINTS - nonGameMakerTotal;
             
             if (remaining >= 0) {
-                // Find the empty field to auto-calculate
-                const emptyField = trickPointFields.find(field => 
-                    field.element.value.trim() === '' || parseInt(field.element.value) === 0
-                );
-                
-                if (emptyField) {
-                    emptyField.element.value = remaining;
-                    addAutoCalculatedIndicator(emptyField);
-                }
+                // Auto-calculate game maker's trick points
+                gameMakerField.element.value = remaining;
+                addAutoCalculatedIndicator(gameMakerField);
             } else {
                 // Remaining would be negative, don't auto-calculate
                 removeAutoCalculatedIndicator();
             }
         } else {
-            // Remove auto-calculation if conditions don't match
-            removeAutoCalculatedIndicator();
+            // If game maker field is manually filled, don't override it
+            // Only remove auto-calculation if we previously auto-calculated the game maker field
+            if (autoCalculatedField && autoCalculatedField.playerId === 'game_maker') {
+                removeAutoCalculatedIndicator();
+            }
         }
         
         // Validate total doesn't exceed 250
@@ -372,6 +389,12 @@ document.addEventListener('DOMContentLoaded', function() {
         field.element.addEventListener('input', onTrickPointChange);
         field.element.addEventListener('blur', calculateTrickPoints);
     });
+    
+    // Add event listeners specifically to game maker trick points field
+    if (gameMakerTrickPoints) {
+        gameMakerTrickPoints.addEventListener('input', onTrickPointChange);
+        gameMakerTrickPoints.addEventListener('blur', calculateTrickPoints);
+    }
     
     // Add listener to game maker selection to update which fields to consider
     const gameMakerSelect = document.getElementById('id_game_maker');
