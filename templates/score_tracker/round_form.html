@@ -147,6 +147,263 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Run once at startup
     updateFormState();
+    
+    // Automatic trick points calculation for the third player
+    const TOTAL_TRICK_POINTS = 250;
+    
+    // Get all trick point input fields
+    const trickPointFields = [];
+    
+    // Game maker trick points
+    const gameMakerTrickPoints = document.getElementById('id_trick_points');
+    if (gameMakerTrickPoints) {
+        trickPointFields.push({
+            element: gameMakerTrickPoints,
+            playerId: 'game_maker'
+        });
+    }
+    
+    // Function to update which players should be included based on selected game maker
+    function updateTrickPointFields() {
+        // Clear existing non-game-maker fields
+        const fieldsToRemove = trickPointFields.filter(f => f.playerId !== 'game_maker');
+        fieldsToRemove.forEach(field => {
+            const index = trickPointFields.indexOf(field);
+            if (index > -1) {
+                trickPointFields.splice(index, 1);
+            }
+        });
+        
+        // Get selected game maker
+        const gameMakerSelect = document.getElementById('id_game_maker');
+        const selectedGameMaker = gameMakerSelect ? gameMakerSelect.value : null;
+        
+        // Update visual state and add other players' trick points (excluding game maker)
+        {% for player in game.players.all %}
+            const player{{ player.id }}TrickPoints = document.getElementById('id_player_{{ player.id }}_trick_points');
+            const player{{ player.id }}Card = player{{ player.id }}TrickPoints ? player{{ player.id }}TrickPoints.closest('.card') : null;
+            
+            if (player{{ player.id }}TrickPoints) {
+                if (selectedGameMaker === '{{ player.id }}') {
+                    // This player is the game maker - disable their "other player" fields
+                    player{{ player.id }}TrickPoints.disabled = true;
+                    player{{ player.id }}TrickPoints.value = '';
+                    player{{ player.id }}TrickPoints.style.backgroundColor = '#f8f9fa';
+                    
+                    const player{{ player.id }}MeldPoints = document.getElementById('id_player_{{ player.id }}_meld_points');
+                    if (player{{ player.id }}MeldPoints) {
+                        player{{ player.id }}MeldPoints.disabled = true;
+                        player{{ player.id }}MeldPoints.value = '';
+                        player{{ player.id }}MeldPoints.style.backgroundColor = '#f8f9fa';
+                    }
+                    
+                    if (player{{ player.id }}Card) {
+                        player{{ player.id }}Card.style.opacity = '0.6';
+                        // Add disabled note
+                        let disabledNote = player{{ player.id }}Card.querySelector('.disabled-note');
+                        if (!disabledNote) {
+                            disabledNote = document.createElement('div');
+                            disabledNote.className = 'disabled-note text-muted small';
+                            disabledNote.innerHTML = '<em>Points tracked in "Game Maker Points" section</em>';
+                            player{{ player.id }}Card.querySelector('.card-body').appendChild(disabledNote);
+                        }
+                    }
+                } else {
+                    // This player is not the game maker - enable their fields
+                    player{{ player.id }}TrickPoints.disabled = false;
+                    player{{ player.id }}TrickPoints.style.backgroundColor = '';
+                    
+                    const player{{ player.id }}MeldPoints = document.getElementById('id_player_{{ player.id }}_meld_points');
+                    if (player{{ player.id }}MeldPoints) {
+                        player{{ player.id }}MeldPoints.disabled = false;
+                        player{{ player.id }}MeldPoints.style.backgroundColor = '';
+                    }
+                    
+                    if (player{{ player.id }}Card) {
+                        player{{ player.id }}Card.style.opacity = '';
+                        const disabledNote = player{{ player.id }}Card.querySelector('.disabled-note');
+                        if (disabledNote) {
+                            disabledNote.remove();
+                        }
+                    }
+                    
+                    // Add to calculation fields
+                    trickPointFields.push({
+                        element: player{{ player.id }}TrickPoints,
+                        playerId: {{ player.id }}
+                    });
+                }
+            }
+        {% endfor %}
+        
+        // Re-add event listeners to new fields
+        trickPointFields.forEach(field => {
+            if (field.playerId !== 'game_maker') {
+                field.element.removeEventListener('input', onTrickPointChange);
+                field.element.removeEventListener('blur', calculateTrickPoints);
+                field.element.addEventListener('input', onTrickPointChange);
+                field.element.addEventListener('blur', calculateTrickPoints);
+            }
+        });
+        
+        // Remove any existing auto-calculation when game maker changes
+        removeAutoCalculatedIndicator();
+        
+        // Recalculate
+        calculateTrickPoints();
+    }
+    
+    let autoCalculatedField = null;
+    
+    function addAutoCalculatedIndicator(field) {
+        // Remove existing indicators
+        removeAutoCalculatedIndicator();
+        
+        // Add visual indicator
+        field.element.style.backgroundColor = '#e8f4fd';
+        field.element.style.border = '2px solid #0066cc';
+        field.element.readOnly = true;
+        
+        // Add icon or text indicator
+        let indicator = field.element.parentNode.querySelector('.auto-calculated-indicator');
+        if (!indicator) {
+            indicator = document.createElement('span');
+            indicator.className = 'auto-calculated-indicator';
+            indicator.innerHTML = ' <i class="text-primary">✓ Auto-calculated</i>';
+            indicator.style.fontSize = '0.85em';
+            indicator.style.color = '#0066cc';
+            field.element.parentNode.appendChild(indicator);
+        }
+        
+        autoCalculatedField = field;
+    }
+    
+    function removeAutoCalculatedIndicator() {
+        if (autoCalculatedField) {
+            autoCalculatedField.element.style.backgroundColor = '';
+            autoCalculatedField.element.style.border = '';
+            autoCalculatedField.element.readOnly = false;
+            
+            const indicator = autoCalculatedField.element.parentNode.querySelector('.auto-calculated-indicator');
+            if (indicator) {
+                indicator.remove();
+            }
+            autoCalculatedField = null;
+        }
+    }
+    
+    function calculateTrickPoints() {
+        // Get the selected game maker
+        const gameMakerSelect = document.getElementById('id_game_maker');
+        const selectedGameMaker = gameMakerSelect ? gameMakerSelect.value : null;
+        
+        if (!selectedGameMaker) {
+            removeAutoCalculatedIndicator();
+            validateTotalTrickPoints();
+            return;
+        }
+        
+        // Find game maker field and non-game maker fields
+        const gameMakerField = trickPointFields.find(field => field.playerId === 'game_maker');
+        const nonGameMakerFields = trickPointFields.filter(field => field.playerId !== 'game_maker');
+        
+        if (!gameMakerField || nonGameMakerFields.length !== 2) {
+            removeAutoCalculatedIndicator();
+            validateTotalTrickPoints();
+            return;
+        }
+        
+        // Count filled non-game maker fields
+        let filledNonGameMakerFields = [];
+        let nonGameMakerTotal = 0;
+        
+        nonGameMakerFields.forEach(field => {
+            const value = parseInt(field.element.value) || 0;
+            if (field.element.value.trim() !== '' && value > 0) {
+                filledNonGameMakerFields.push(field);
+                nonGameMakerTotal += value;
+            }
+        });
+        
+        // If exactly 2 non-game maker fields are filled, auto-calculate game maker's points
+        if (filledNonGameMakerFields.length === 2) {
+            const remaining = TOTAL_TRICK_POINTS - nonGameMakerTotal;
+            
+            if (remaining >= 0) {
+                // Auto-calculate game maker's trick points
+                gameMakerField.element.value = remaining;
+                addAutoCalculatedIndicator(gameMakerField);
+            } else {
+                // Remaining would be negative, don't auto-calculate
+                removeAutoCalculatedIndicator();
+            }
+        } else {
+            // If game maker field is manually filled, don't override it
+            // Only remove auto-calculation if we previously auto-calculated the game maker field
+            if (autoCalculatedField && autoCalculatedField.playerId === 'game_maker') {
+                removeAutoCalculatedIndicator();
+            }
+        }
+        
+        // Validate total doesn't exceed 250
+        validateTotalTrickPoints();
+    }
+    
+    function validateTotalTrickPoints() {
+        let total = 0;
+        trickPointFields.forEach(field => {
+            const value = parseInt(field.element.value) || 0;
+            total += value;
+        });
+        
+        // Remove existing error
+        const existingError = document.querySelector('.trick-points-error');
+        if (existingError) {
+            existingError.remove();
+        }
+        
+        if (total > TOTAL_TRICK_POINTS) {
+            // Add error message
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'alert alert-danger trick-points-error mt-2';
+            errorDiv.innerHTML = `Total trick points (${total}) cannot exceed ${TOTAL_TRICK_POINTS}`;
+            
+            // Add after the "Other Players' Points" section
+            const otherPlayersSection = Array.from(document.querySelectorAll('h5')).find(h => h.textContent.includes("Other Players"));
+            if (otherPlayersSection) {
+                otherPlayersSection.parentNode.appendChild(errorDiv);
+            }
+        }
+    }
+    
+    function onTrickPointChange() {
+        // If this field was auto-calculated and user is modifying it, remove auto-calculation
+        if (autoCalculatedField && autoCalculatedField.element === this) {
+            removeAutoCalculatedIndicator();
+        }
+        calculateTrickPoints();
+    }
+    
+    // Add event listeners to all trick point fields
+    trickPointFields.forEach(field => {
+        field.element.addEventListener('input', onTrickPointChange);
+        field.element.addEventListener('blur', calculateTrickPoints);
+    });
+    
+    // Add event listeners specifically to game maker trick points field
+    if (gameMakerTrickPoints) {
+        gameMakerTrickPoints.addEventListener('input', onTrickPointChange);
+        gameMakerTrickPoints.addEventListener('blur', calculateTrickPoints);
+    }
+    
+    // Add listener to game maker selection to update which fields to consider
+    const gameMakerSelect = document.getElementById('id_game_maker');
+    if (gameMakerSelect) {
+        gameMakerSelect.addEventListener('change', updateTrickPointFields);
+    }
+    
+    // Initial setup
+    updateTrickPointFields();
 });
 </script>
 {% endblock %}
