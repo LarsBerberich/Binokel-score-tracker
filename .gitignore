@@ -54,7 +54,8 @@ venv.bak/
 
 # IDE specific files
 .idea/
-.vscode/
+# VS Code settings are included for development setup
+# .vscode/
 *.swp
 *.swo
 .DS_Store
