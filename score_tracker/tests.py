@@ -668,6 +668,37 @@ class FormTests(TestCase):
         }
         form = RoundForm(data=form_data, game=self.game)
         self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+    
+    def test_round_form_game_maker_not_in_other_players_section(self):
+        """Test that game maker's card should be hidden in 'Other Players' Points' section via JavaScript."""
+        # This test verifies the template renders correctly with all players listed
+        # The actual hiding behavior is handled by JavaScript and would require a browser test
+        form = RoundForm(game=self.game)
+        
+        # Verify all players get dynamic fields created
+        for player in [self.player1, self.player2, self.player3]:
+            self.assertIn(f'player_{player.id}_meld_points', form.fields)
+            self.assertIn(f'player_{player.id}_trick_points', form.fields)
+        
+        # Verify form validation excludes game maker from trick points total
+        form_data = {
+            'game_maker': self.player2.pk,  # Player2 is game maker
+            'bid_amount': 150,
+            'is_success': True,
+            'meld_points': 100,
+            'trick_points': 150,  # Game maker: 150
+            # Game maker's "other player" fields (should be ignored)
+            f'player_{self.player2.id}_meld_points': 999,  
+            f'player_{self.player2.id}_trick_points': 999,  
+            # Non-game maker players
+            f'player_{self.player1.id}_meld_points': 50,
+            f'player_{self.player1.id}_trick_points': 50,  # Player 1: 50
+            f'player_{self.player3.id}_meld_points': 25,
+            f'player_{self.player3.id}_trick_points': 50,  # Player 3: 50
+            # Total: 150 + 50 + 50 = 250 (game maker's other fields ignored)
+        }
+        form = RoundForm(data=form_data, game=self.game)
+        self.assertTrue(form.is_valid(), f"Form should be valid, but got errors: {form.errors}")
 
 
 class IntegrationTests(TestCase):
