@@ -42,7 +42,7 @@ class RoundForm(forms.ModelForm):
         model = Round
         fields = [
             'game_maker', 'bid_amount', 'is_success', 'is_abgehen', 'is_durch', 'is_doppelt_abgehen',
-            'meld_points', 'trick_points', 'last_trick_winner'
+            'meld_points', 'trick_points'
         ]
         widgets = {
             'is_success': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
@@ -59,24 +59,47 @@ class RoundForm(forms.ModelForm):
             # Limit player choices to players in this game
             players = self.game.players.all()
             self.fields['game_maker'].queryset = players
-            self.fields['last_trick_winner'].queryset = players
             
-            # Add fields for each player's meld points and trick points
-            for player in players:
+            # Set tabindex for initial form fields
+            self.fields['game_maker'].widget.attrs.update({'tabindex': '1'})
+            self.fields['bid_amount'].widget.attrs.update({'tabindex': '2'})
+            self.fields['meld_points'].widget.attrs.update({'tabindex': '3'})
+            
+            # Start tabindex counter after game maker's meld points
+            tabindex_counter = 4
+            player_list = list(players)
+            
+            # First add all players' meld points fields (after game maker's meld points)
+            for player in player_list:
                 self.fields[f'player_{player.id}_meld_points'] = forms.IntegerField(
                     label=f"{player.name}'s meld points",
                     required=False,
                     min_value=0,
                     initial=0,
-                    widget=forms.NumberInput(attrs={'class': 'form-control'})
+                    widget=forms.NumberInput(attrs={'class': 'form-control', 'tabindex': str(tabindex_counter)})
                 )
+                tabindex_counter += 1
+            
+            # Then set game maker's trick points (after all meld points)
+            self.fields['trick_points'].widget.attrs.update({'tabindex': str(tabindex_counter)})
+            tabindex_counter += 1
+                
+            # Finally add all players' trick points fields (after game maker's trick points)
+            for player in player_list:
                 self.fields[f'player_{player.id}_trick_points'] = forms.IntegerField(
                     label=f"{player.name}'s trick points",
                     required=False,
                     min_value=0,
                     initial=0,
-                    widget=forms.NumberInput(attrs={'class': 'form-control'})
+                    widget=forms.NumberInput(attrs={'class': 'form-control', 'tabindex': str(tabindex_counter)})
                 )
+                tabindex_counter += 1
+                
+            # Finally set tabindex for checkboxes
+            self.fields['is_success'].widget.attrs.update({'tabindex': str(tabindex_counter)})
+            self.fields['is_abgehen'].widget.attrs.update({'tabindex': str(tabindex_counter + 1)})
+            self.fields['is_durch'].widget.attrs.update({'tabindex': str(tabindex_counter + 2)})
+            self.fields['is_doppelt_abgehen'].widget.attrs.update({'tabindex': str(tabindex_counter + 3)})
 
     def clean(self):
         """Custom validation for the entire form."""
