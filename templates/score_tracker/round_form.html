@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', function() {
         input.addEventListener('input', calculateAutomaticStatus);
     });
     
-    // Run once at startup
+    // Run initial setup for status calculation
     updateFormState();
     calculateAutomaticStatus();
     
@@ -518,7 +518,7 @@ document.addEventListener('DOMContentLoaded', function() {
         gameMakerSelect.addEventListener('change', updateTrickPointFields);
     }
     
-    // Initial setup
+    // Initial setup for trick points calculation
     updateTrickPointFields();
 });
 </script>

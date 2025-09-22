@@ -669,7 +669,6 @@ class FormTests(TestCase):
         form = RoundForm(data=form_data, game=self.game)
         self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
 
-
 class IntegrationTests(TestCase):
     """Integration tests for complete game workflows."""
     
