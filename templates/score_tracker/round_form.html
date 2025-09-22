@@ -301,31 +301,22 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (player{{ player.id }}TrickPoints) {
                 if (selectedGameMaker === '{{ player.id }}') {
-                    // This player is the game maker - disable their "other player" fields
+                    // This player is the game maker - hide their "other player" card completely
                     player{{ player.id }}TrickPoints.disabled = true;
                     player{{ player.id }}TrickPoints.value = '';
-                    player{{ player.id }}TrickPoints.style.backgroundColor = '#f8f9fa';
                     
                     const player{{ player.id }}MeldPoints = document.getElementById('id_player_{{ player.id }}_meld_points');
                     if (player{{ player.id }}MeldPoints) {
                         player{{ player.id }}MeldPoints.disabled = true;
                         player{{ player.id }}MeldPoints.value = '';
-                        player{{ player.id }}MeldPoints.style.backgroundColor = '#f8f9fa';
                     }
                     
                     if (player{{ player.id }}Card) {
-                        player{{ player.id }}Card.style.opacity = '0.6';
-                        // Add disabled note
-                        let disabledNote = player{{ player.id }}Card.querySelector('.disabled-note');
-                        if (!disabledNote) {
-                            disabledNote = document.createElement('div');
-                            disabledNote.className = 'disabled-note text-muted small';
-                            disabledNote.innerHTML = '<em>Points tracked in "Game Maker Points" section</em>';
-                            player{{ player.id }}Card.querySelector('.card-body').appendChild(disabledNote);
-                        }
+                        // Hide the entire card instead of just disabling it
+                        player{{ player.id }}Card.style.display = 'none';
                     }
                 } else {
-                    // This player is not the game maker - enable their fields
+                    // This player is not the game maker - show and enable their fields
                     player{{ player.id }}TrickPoints.disabled = false;
                     player{{ player.id }}TrickPoints.style.backgroundColor = '';
                     
@@ -336,6 +327,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     
                     if (player{{ player.id }}Card) {
+                        // Show the card and reset any previous styling
+                        player{{ player.id }}Card.style.display = '';
                         player{{ player.id }}Card.style.opacity = '';
                         const disabledNote = player{{ player.id }}Card.querySelector('.disabled-note');
                         if (disabledNote) {
