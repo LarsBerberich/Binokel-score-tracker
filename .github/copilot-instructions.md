@@ -1,5 +1,7 @@
 # Copilot Instructions for Binokel Score Tracker
 
+Always reference these instructions first and fallback to search or bash commands only when you encounter unexpected information that does not match the info here.
+
 ## Repository Overview
 
 This is a Django web application for tracking scores in Binokel, a traditional 3-player Swabian card game. The application manages players, games, rounds, and complex scoring calculations including bid amounts, meld points, trick points, and special game variants like "abgehen" (going down) and "Durch" (taking all tricks).
@@ -23,6 +25,7 @@ This is a Django web application for tracking scores in Binokel, a traditional 3
 ```bash
 pip install -r requirements.txt
 ```
+Time: ~15 seconds. NEVER CANCEL: Set timeout to 60+ seconds for pip install commands.
 
 ### Essential Development Commands (in order)
 
@@ -30,19 +33,19 @@ pip install -r requirements.txt
 ```bash
 python manage.py migrate
 ```
-Time: ~5 seconds. Creates SQLite database with all required tables.
+Time: ~1 second. Creates SQLite database with all required tables.
 
 2. **Static Files (required before running server):**
 ```bash
 python manage.py collectstatic --noinput
 ```
-Time: ~2 seconds. Collects static files to `staticfiles/` directory.
+Time: ~1 second. Collects static files to `staticfiles/` directory.
 
 3. **Run Tests (validate before changes):**
 ```bash
 python manage.py test
 ```
-Time: ~5 seconds. Runs 35 tests (unit, integration, and view tests). All tests must pass.
+Time: ~1 second. Runs 44 tests (unit, integration, and view tests). All tests must pass.
 
 4. **Development Server:**
 ```bash
@@ -58,9 +61,15 @@ Time: ~1 second. Validates Django configuration. Must show "0 issues" before dep
 
 ### Docker Development (Alternative)
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
+**IMPORTANT:** Docker build may fail in sandboxed environments due to SSL certificate issues. Use native Python development instead in such environments.
 Time: ~30 seconds first build, ~5 seconds subsequent runs. Includes PostgreSQL database.
+
+### Automated Setup Scripts
+- Linux/Mac: `bash setup_dev.sh` - Creates virtual environment and sets up project
+- Windows: `setup_dev.bat` - Windows equivalent setup script
+**Note:** These scripts may fail in sandboxed environments due to network restrictions. Use manual commands above instead.
 
 ### Common Issues and Solutions
 
@@ -127,28 +136,46 @@ Located in `score_tracker/models.py`:
 
 ## Testing and Validation
 
-### Test Structure (35 tests total)
+### Test Structure (44 tests total)
 - **Model Tests:** Player, Game, Round, Score creation and business logic
 - **View Tests:** HTTP responses, form handling, URL routing
 - **Integration Tests:** Complete game workflows from creation to completion
+- **Specialized Tests:** DoppeltAbgehen functionality and form validation
 
 ### Running Specific Test Categories
 ```bash
-# All tests
+# All tests (44 tests in ~1 second)
 python manage.py test
 
 # Specific test class
 python manage.py test score_tracker.tests.PlayerModelTest
 
-# BDD tests (if features exist)
-python manage.py behave
+# Verbose output
+python manage.py test --verbosity=2
 ```
+
+### BDD Tests
+**Note:** While `behave-django` is in requirements.txt, no BDD feature files exist in the repository. The `python manage.py behave` command is not functional.
 
 ### Pre-deployment Validation
 Always run these commands before committing changes:
 1. `python manage.py check` (must show 0 issues)
-2. `python manage.py test` (all 35 tests must pass)
+2. `python manage.py test` (all 44 tests must pass)
 3. `python manage.py migrate --check` (verify migrations are up to date)
+
+### Manual Validation Scenarios
+**ALWAYS test these user scenarios after making changes:**
+
+1. **Homepage Access:** Navigate to http://127.0.0.1:8000/ and verify the application loads with game statistics
+2. **Game Creation Workflow:**
+   - Click "New Game" → Fill in at least 3 player names → Click "Create Game"
+   - Verify game detail page loads with player scoreboard
+3. **Core Application Logic:**
+   - Create test players, games, and rounds through Django shell
+   - Verify scoring calculations work correctly
+   - Test game maker vs. other player scoring differences
+
+**Screenshot Verification:** The application homepage shows a clean Bootstrap-styled interface with navigation, game statistics, and game rules information.
 
 ## Dependencies and Environment
 
@@ -217,3 +244,17 @@ These instructions have been validated by running all commands and testing the c
 - Requirements change (new dependencies, different deployment target)
 
 The development workflow is straightforward: install dependencies → migrate → collect static files → test → develop → test again.
+
+## Critical Timeouts and "NEVER CANCEL" Warnings
+
+**NEVER CANCEL these commands - always set appropriate timeouts:**
+- `pip install -r requirements.txt`: Set timeout to 300+ seconds (actual: ~15 seconds)
+- `docker compose build`: Set timeout to 600+ seconds (may fail in sandboxed environments)
+- All tests complete in ~1 second, Django commands complete in ~1 second
+
+**Command Timing Summary (measured):**
+- Dependencies: ~15 seconds
+- Database migration: ~1 second  
+- Static file collection: ~1 second
+- Test suite (44 tests): ~1 second
+- Django check: ~1 second
