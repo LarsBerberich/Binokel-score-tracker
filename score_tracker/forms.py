@@ -60,17 +60,16 @@ class RoundForm(forms.ModelForm):
             players = self.game.players.all()
             self.fields['game_maker'].queryset = players
             
-            # Set tabindex for main form fields
+            # Set tabindex for initial form fields
             self.fields['game_maker'].widget.attrs.update({'tabindex': '1'})
             self.fields['bid_amount'].widget.attrs.update({'tabindex': '2'})
             self.fields['meld_points'].widget.attrs.update({'tabindex': '3'})
-            self.fields['trick_points'].widget.attrs.update({'tabindex': '4'})
             
-            # Add fields for each player's meld points and trick points
-            tabindex_counter = 5
+            # Start tabindex counter after game maker's meld points
+            tabindex_counter = 4
             player_list = list(players)
             
-            # First add all meld points fields
+            # First add all players' meld points fields (after game maker's meld points)
             for player in player_list:
                 self.fields[f'player_{player.id}_meld_points'] = forms.IntegerField(
                     label=f"{player.name}'s meld points",
@@ -80,8 +79,12 @@ class RoundForm(forms.ModelForm):
                     widget=forms.NumberInput(attrs={'class': 'form-control', 'tabindex': str(tabindex_counter)})
                 )
                 tabindex_counter += 1
+            
+            # Then set game maker's trick points (after all meld points)
+            self.fields['trick_points'].widget.attrs.update({'tabindex': str(tabindex_counter)})
+            tabindex_counter += 1
                 
-            # Then add all trick points fields  
+            # Finally add all players' trick points fields (after game maker's trick points)
             for player in player_list:
                 self.fields[f'player_{player.id}_trick_points'] = forms.IntegerField(
                     label=f"{player.name}'s trick points",
